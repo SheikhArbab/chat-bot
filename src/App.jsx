@@ -20,7 +20,7 @@ const App = () => {
       </button>}
 
       <div className={`h-fit overflow-hidden ms-auto duration-300 transition-all glass border-2 ${isOpen ? "w-96 opacity-100" : "w-0 opacity-0"}`}>
-        <Chat />
+        <Chat isOpen={isOpen} setIsOpen={setIsOpen} />
       </div>
       <i className="main glass -z-10"></i>
     </main>

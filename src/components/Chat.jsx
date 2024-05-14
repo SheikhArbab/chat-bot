@@ -1,100 +1,67 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { IoClose } from 'react-icons/io5';
 
-const Chat = () => {
+const Chat = ({ isOpen, setIsOpen }) => {
     const [newMessage, setNewMessage] = useState('');
     const [showTyping, setShowTyping] = useState(false);
-    const [waitingOnResponse, setWaitingOnResponse] = useState(true);
+    const [waitingOnResponse, setWaitingOnResponse] = useState(false);
     const [messages, setMessages] = useState([]);
 
-    axios.defaults.baseURL = "https://fakestoreapi.com/";
+    // Set the base URL for Axios requests
+    axios.defaults.baseURL = "https://samar-bot.onrender.com/";
 
-    const getProducts = async () => {
-      try {
-        const res = await axios.get('products');
-        console.log(res);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-  
-      }
-  
-    }
-  
-    useEffect(() => {
-      getProducts();
-    }, []);
-
-    // Demo variables
-    const mockTypingAfter = 1500;
-    const mockResponseAfter = 3000;
-    const mockOpeningMessage =
-        "Hello there. I am chat bot. Created by Arbab. Aks me anything you want. I will not have a usefull response. I will just echo what you sent me.";
-    const mockResponsePrefix = "Thanks for sending me: ";
-
-    useEffect(() => {
-        init();
-    }, []);
-
-    const init = () => {
-        mockResponse(mockOpeningMessage);
+    // Function to fetch response from the backend
+    const getGptResponse = async () => {
+        try {
+            const response = await axios.post('gpt', { prompt: newMessage });
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching response:', error);
+            return null;
+        }
     };
 
-    const sendMessage = (e) => {
+    // Function to send user message and receive response
+    const sendMessage = async (e) => {
         e.preventDefault();
-        if (waitingOnResponse) return;
+        if (!newMessage.trim() || waitingOnResponse) return;
         setWaitingOnResponse(true);
         setMessages([...messages, { role: "user", body: newMessage }]);
         setNewMessage('');
         window.scrollTo(0, document.body.scrollHeight); // Scroll to bottom
-        mockResponse();
+
+        // Fetch response from backend
+        const response = await getGptResponse();
+        if (response) {
+            // Add response to messages
+            setMessages([...messages, { role: "assistant", body: response }]);
+        }
+        setWaitingOnResponse(false);
     };
 
-    const typeOutResponse = (message) => {
-        const updatedMessages = [...messages];
-        updatedMessages.push({ role: "assistant", body: "", beingTyped: true });
-        setMessages(updatedMessages);
-        let i = 0;
-        let interval = setInterval(() => {
-            updatedMessages[updatedMessages.length - 1].body += message.charAt(i);
-            i++;
-            if (i > message.length - 1) {
-                setWaitingOnResponse(false);
-                delete updatedMessages[updatedMessages.length - 1].beingTyped;
-                clearInterval(interval);
-                setMessages(updatedMessages);
-            }
-        }, 30);
-    };
-
-    const mockResponse = (message) => {
-        setTimeout(() => {
-            setShowTyping(true);
-        }, mockTypingAfter);
-        setTimeout(() => {
-            setShowTyping(false);
-            let responseMessage =
-                message ?? mockResponsePrefix + messages[messages.length - 1].body;
-            typeOutResponse(responseMessage);
-        }, mockResponseAfter);
-    };
+    useEffect(() => {
+        // Initial message when component mounts
+        if (isOpen) {
+            setMessages([{ role: "assistant", body: "Hello! How can I assist you?" }]);
+        }
+    }, [isOpen]);
 
     return (
-        <div className="w-96 h-screen relative pb-16 flex flex-col ms-auto"> 
+        <div className="w-96 h-screen relative pb-16 flex flex-col ms-auto">
 
             <div className="w-full  max-w-screen-lg flex-1 m-auto p-8 my-4 pb-20 overflow-y-auto">
+                <button onClick={() => setIsOpen(!isOpen)} className='cursor-pointer absolute top-5 z-40 text-red-500 right-10'><IoClose /></button>
                 <div className="flex flex-col">
                     {messages.map((message, index) => (
                         <div
                             key={index}
                             className={`message rounded-lg py-2 px-6 mb-4 ${message.role === 'assistant'
-                                    ? 'assistant bg-blue-100 border-blue-100 self-start'
-                                    : 'user bg-green-200 border-green-200 self-end'
+                                ? 'assistant bg-blue-100 border-blue-100 self-start'
+                                : 'user bg-green-200 border-green-200 self-end'
                                 }`}
                         >
                             <span>{message.body}</span>
-                            {message.beingTyped && (
-                                <span className="w-2.5 bg-gray-600 h-4 inline-block -mb-0.5 align-baseline blink"></span>
-                            )}
                         </div>
                     ))}
                     {showTyping && (
